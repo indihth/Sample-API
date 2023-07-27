@@ -7,9 +7,12 @@ use App\Models\Task;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use App\Http\Resources\TasksResource;
+use App\Traits\HttpResponses;
 
 class TasksController extends Controller
 {
+
+    use HttpResponses;
     /**
      * Display a listing of the resource.
      */
@@ -45,32 +48,45 @@ class TasksController extends Controller
     /**
      * Display the specified resource.
      */
-    public function show(string $id)
+    public function show(Task $task)
     {
-        //
+        // Check if user is authorised, if yes, print out error message, if not, return $task
+        return $this->isNotAuthorized($task) ? $this->isNotAuthorized($task) : new TasksResource($task);
+
+        return new TasksResource($task);
     }
 
-    /**
-     * Show the form for editing the specified resource.
-     */
-    public function edit(string $id)
-    {
-        //
-    }
+    // The edit() method also isn't needed, just a web form that is sent to update()
 
     /**
      * Update the specified resource in storage.
      */
-    public function update(Request $request, string $id)
+    public function update(Request $request, Task $task)
     {
-        //
+        // PUT vs. PATCH - PUT updates all fields / PATCH updates selected fields
+
+        // Check the tasks belongs to the authorised user, if not returns forbidden error
+        if(Auth::user()->id != $task->user_id) {
+            return $this->error('', 'You are not authorized to make this request', 403);
+        }
+
+        $task->update($request->all());
+
+        return new TasksResource($task);
     }
 
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(string $id)
+    public function destroy(Task $task)
     {
-        //
+        return $this->isNotAuthorized($task) ? $this->isNotAuthorized($task) : $task->delete();
+    }
+
+    private function isNotAuthorized($task) {
+        // Check the tasks belongs to the authorised user, if not returns forbidden error
+        if(Auth::user()->id != $task->user_id) {
+            return $this->error('', 'You are not authorized to make this request', 403);
+        }
     }
 }
