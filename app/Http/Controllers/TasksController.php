@@ -2,8 +2,11 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\StoreTaskRequest;
 use App\Models\Task;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use App\Http\Resources\TasksResource;
 
 class TasksController extends Controller
 {
@@ -12,23 +15,31 @@ class TasksController extends Controller
      */
     public function index()
     {
-        return Task::all();
+        // Sends tasks to the TasksResource to be converted to JSON
+        return TasksResource::collection(
+            // Gets the tasks where the 'user_id' == the authenticated user id
+            Task::where('user_id', Auth::user()->id)->get()
+        );
     }
 
-    /**
-     * Show the form for creating a new resource.
-     */
-    public function create()
-    {
-        //
-    }
+    // The create() method not used in API, go straight to store()
 
     /**
      * Store a newly created resource in storage.
      */
-    public function store(Request $request)
+    public function store(StoreTaskRequest $request)
     {
-        //
+        $request->validated($request);
+
+        $task = Task::create([
+            'user_id' => Auth::user()->id,
+            'name' => $request->name,
+            'description' => $request->description,
+            'priority' => $request->priority,
+        ]);
+
+        // Sends the newly created $task to be formatted by the TasksResource into a JSON object
+        return new TasksResource($task);
     }
 
     /**
